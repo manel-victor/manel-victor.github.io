@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Afinador de Violão</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .afinador {
+      background: #1e1e1e;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .nota {
+      font-size: 48px;
+      font-weight: bold;
+    }
+
+    .frequencia {
+      font-size: 18px;
+      margin-top: 10px;
+      color: #aaa;
+    }
+
+    .status {
+      margin-top: 15px;
+      font-size: 20px;
+    }
+
+    .ok {
+      color: #00ff88;
+    }
+
+    .baixo {
+      color: #ffcc00;
+    }
+
+    .alto {
+      color: #ff5555;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #00aaff;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0088cc;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="afinador">
+    <h1>Afinador 🎸</h1>
+    <div class="nota" id="nota">--</div>
+    <div class="frequencia" id="freq">0 Hz</div>
+    <div class="status" id="status">Clique em iniciar</div>
+    <button onclick="iniciar()">Iniciar Afinador</button>
+  </div>
+
+  <script>
+    let audioContext;
+    let analyser;
+    let buffer = new Float32Array(2048);
+
+    const notas = [
+      { nota: "E", freq: 82.4 },
+      { nota: "A", freq: 110.0 },
+      { nota: "D", freq: 146.8 },
+      { nota: "G", freq: 196.0 },
+      { nota: "B", freq: 246.9 },
+      { nota: "E", freq: 329.6 }
+    ];
+
+    function iniciar() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          audioContext = new AudioContext();
+          const source = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          source.connect(analyser);
+          detectar();
+        });
+    }
+
+    function detectar() {
+      analyser.getFloatTimeDomainData(buffer);
+      const freq = autoCorrelacao(buffer, audioContext.sampleRate);
+
+      if (freq !== -1) {
+        const nota = notaMaisProxima(freq);
+        document.getElementById("nota").innerText = nota.nota;
+        document.getElementById("freq").innerText = freq.toFixed(1) + " Hz";
+
+        const diff = freq - nota.freq;
+        const status = document.getElementById("status");
+
+        if (Math.abs(diff) < 1) {
+          status.innerText = "Afinado";
+          status.className = "status ok";
+        } else if (diff < 0) {
+          status.innerText = "Aumente a afinação";
+          status.className = "status baixo";
+        } else {
+          status.innerText = "Diminua a afinação";
+          status.className = "status alto";
+        }
+      }
+
+      requestAnimationFrame(detectar);
+    }
+
+    function notaMaisProxima(freq) {
+      let menor = Infinity;
+      let escolhida = notas[0];
+
+      notas.forEach(n => {
+        const diff = Math.abs(freq - n.freq);
+        if (diff < menor) {
+          menor = diff;
+          escolhida = n;
+        }
+      });
+
+      return escolhida;
+    }
+
+    function autoCorrelacao(buffer, sampleRate) {
+      let tamanho = buffer.length;
+      let max = 0;
+      let indice = -1;
+
+      for (let lag = 20; lag < 1000; lag++) {
+        let soma = 0;
+        for (let i = 0; i < tamanho - lag; i++) {
+          soma += buffer[i] * buffer[i + lag];
+        }
+        if (soma > max) {
+          max = soma;
+          indice = lag;
+        }
+      }
+      if (indice === -1) return -1;
+      return sampleRate / indice;
+    }
+  </script>
+
+</body>
+</html>
