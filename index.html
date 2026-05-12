@@ -1,175 +1,206 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Afinador de Violão</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-
-    .afinador {
-      background: #1e1e1e;
-      padding: 30px;
-      border-radius: 15px;
-      text-align: center;
-      width: 300px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    .nota {
-      font-size: 48px;
-      font-weight: bold;
-    }
-
-    .frequencia {
-      font-size: 18px;
-      margin-top: 10px;
-      color: #aaa;
-    }
-
-    .status {
-      margin-top: 15px;
-      font-size: 20px;
-    }
-
-    .ok {
-      color: #00ff88;
-    }
-
-    .baixo {
-      color: #ffcc00;
-    }
-
-    .alto {
-      color: #ff5555;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 10px;
-      background: #00aaff;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0088cc;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👑 Império Lanches — Painel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="afinador">
-    <h1>Afinador 🎸</h1>
-    <div class="nota" id="nota">--</div>
-    <div class="frequencia" id="freq">0 Hz</div>
-    <div class="status" id="status">Clique em iniciar</div>
-    <button onclick="iniciar()">Iniciar Afinador</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>👑 IMPÉRIO</h1>
+    <p>PAINEL DE GERENCIAMENTO</p>
+  </div>
+  <div class="nav-section">MENU</div>
+  <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+  <div class="nav-item" onclick="showPage('orders')" id="nav-orders"><i class="fa-solid fa-bag-shopping"></i> Pedidos<span class="nav-badge" id="pendingBadge" style="display:none">0</span></div>
+  <div class="nav-section">RELATÓRIOS</div>
+  <div class="nav-item" onclick="showPage('analytics')" id="nav-analytics"><i class="fa-solid fa-chart-bar"></i> Vendas</div>
+  <div class="nav-section">SISTEMA</div>
+  <div class="nav-item" onclick="showPage('settings')" id="nav-settings"><i class="fa-solid fa-gear"></i> Configurações</div>
+  <div class="sidebar-bottom">
+    <div class="printer-status" onclick="connectPrinter()" title="Clique para conectar impressora Bluetooth">
+      <div class="printer-dot" id="printerDot"></div>
+      <div class="printer-label">Impressora BT<small id="printerName">Não conectada</small></div>
+      <i class="fa-solid fa-print" style="color:var(--text-faint);font-size:12px"></i>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="ham-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-left">
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSubtitle">Visão geral do negócio</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Conectado</span></div>
+      <button class="sound-toggle" onclick="toggleSound()" id="soundBtn"><i class="fa-solid fa-volume-high"></i> <span>Som</span></button>
+      <button class="btn-icon" onclick="fetchCloudOrders()" title="Buscar pedidos"><i class="fa-solid fa-rotate-right"></i></button>
+      <button class="btn-primary" onclick="openAddOrder()"><i class="fa-solid fa-plus"></i> Novo Pedido</button>
+    </div>
   </div>
 
-  <script>
-    let audioContext;
-    let analyser;
-    let buffer = new Float32Array(2048);
+  <div class="content">
 
-    const notas = [
-      { nota: "E", freq: 82.4 },
-      { nota: "A", freq: 110.0 },
-      { nota: "D", freq: 146.8 },
-      { nota: "G", freq: 196.0 },
-      { nota: "B", freq: 246.9 },
-      { nota: "E", freq: 329.6 }
-    ];
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:rgba(255,87,34,0.1);color:var(--primary)"><i class="fa-solid fa-bag-shopping"></i></div><span class="stat-trend up" id="trendPedidos">+0%</span></div><div class="stat-value" id="statPedidos">0</div><div class="stat-label">Pedidos Hoje</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--green-bg);color:var(--green)"><i class="fa-solid fa-dollar-sign"></i></div><span class="stat-trend up" id="trendVendas">+0%</span></div><div class="stat-value" id="statVendas">R$ 0</div><div class="stat-label">Faturamento Hoje</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--yellow-bg);color:var(--yellow)"><i class="fa-solid fa-clock"></i></div><span class="stat-trend" id="trendPendentes" style="background:var(--yellow-bg);color:var(--yellow)">0 abertos</span></div><div class="stat-value" id="statPendentes">0</div><div class="stat-label">Pedidos Pendentes</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="fa-solid fa-receipt"></i></div><span class="stat-trend up" id="trendTicket">R$ 0</span></div><div class="stat-value" id="statTicket">R$ 0</div><div class="stat-label">Ticket Médio</div></div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div><div style="font-size:14px;font-weight:800">Pedidos Recentes</div><div style="font-size:11px;color:var(--text-faint)">Últimas atualizações</div></div>
+          <button class="btn-primary" onclick="showPage('orders')" style="padding:7px 14px;font-size:11px">Ver todos</button>
+        </div>
+        <div id="recentOrdersList"><div class="empty-orders"><i class="fa-solid fa-bag-shopping"></i><p>Nenhum pedido ainda</p></div></div>
+      </div>
+    </div>
 
-    function iniciar() {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          audioContext = new AudioContext();
-          const source = audioContext.createMediaStreamSource(stream);
-          analyser = audioContext.createAnalyser();
-          analyser.fftSize = 2048;
-          source.connect(analyser);
-          detectar();
-        });
-    }
+    <!-- PEDIDOS -->
+    <div class="page" id="page-orders">
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <div class="filter-tab active" onclick="filterOrders('all',this)">Todos</div>
+          <div class="filter-tab" onclick="filterOrders('new',this)">Novos</div>
+          <div class="filter-tab" onclick="filterOrders('preparing',this)">Preparando</div>
+          <div class="filter-tab" onclick="filterOrders('ready',this)">Prontos</div>
+          <div class="filter-tab" onclick="filterOrders('delivered',this)">Entregues</div>
+        </div>
+        <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Buscar pedido ou cliente..." id="orderSearch" oninput="searchOrders()"></div>
+      </div>
+      <div class="orders-layout">
+        <div class="orders-list" id="ordersList"><div class="empty-orders"><i class="fa-solid fa-bag-shopping"></i><p>Nenhum pedido encontrado</p></div></div>
+        <div class="order-detail" id="orderDetail"><div class="detail-empty"><i class="fa-solid fa-hand-pointer"></i><p style="font-size:12px">Selecione um pedido<br>para ver os detalhes</p></div></div>
+      </div>
+    </div>
 
-    function detectar() {
-      analyser.getFloatTimeDomainData(buffer);
-      const freq = autoCorrelacao(buffer, audioContext.sampleRate);
+    <!-- ANALYTICS -->
+    <div class="page" id="page-analytics">
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:rgba(255,87,34,0.1);color:var(--primary)"><i class="fa-solid fa-calendar-week"></i></div></div><div class="stat-value" id="weekTotal">R$ 0</div><div class="stat-label">Faturamento Semana</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--green-bg);color:var(--green)"><i class="fa-solid fa-calendar"></i></div></div><div class="stat-value" id="monthTotal">R$ 0</div><div class="stat-label">Faturamento Mês</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--purple-bg);color:var(--purple)"><i class="fa-solid fa-users"></i></div></div><div class="stat-value" id="totalCustomers">0</div><div class="stat-label">Clientes Distintos</div></div>
+        <div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:var(--yellow-bg);color:var(--yellow)"><i class="fa-solid fa-star"></i></div></div><div class="stat-value" id="topItem">—</div><div class="stat-label">Item Mais Vendido</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">Faturamento por Dia</div><div class="chart-sub">Últimos 7 dias</div><div class="bar-chart" id="barChart"></div></div>
+        <div class="chart-card"><div class="chart-title">🏆 Top Itens Vendidos</div><div class="chart-sub">Ranking de produtos</div><div class="top-items-list" id="topItemsList"></div></div>
+      </div>
+      <div class="chart-card" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px">
+        <div class="chart-title">Pagamentos por Forma</div><div class="chart-sub" style="margin-bottom:14px">Distribuição de métodos</div>
+        <div id="paymentBreakdown" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
 
-      if (freq !== -1) {
-        const nota = notaMaisProxima(freq);
-        document.getElementById("nota").innerText = nota.nota;
-        document.getElementById("freq").innerText = freq.toFixed(1) + " Hz";
+    <!-- CONFIGURAÇÕES -->
+    <div class="page" id="page-settings">
+      <div class="settings-section"><h3><i class="fa-solid fa-store"></i> Loja</h3>
+        <div class="settings-row"><div><label>Nome da Loja</label><small>Aparece nos cupons impressos</small></div><input class="inp-field" id="cfg-storeName" value="Império Lanches"></div>
+        <div class="settings-row"><div><label>Endereço</label><small>Endereço impresso no cupom</small></div><input class="inp-field" id="cfg-storeAddr" value="NATAL, RN"></div>
+        <div class="settings-row"><div><label>WhatsApp</label><small>Para pedidos via WhatsApp</small></div><input class="inp-field" id="cfg-phone" value="5584994994919"></div>
+      </div>
+      <div class="settings-section"><h3><i class="fa-solid fa-print"></i> Impressora Bluetooth</h3>
+        <div class="settings-row"><div><label>Impressora conectada</label><small id="printerStatusText">Nenhuma</small></div><button class="btn-primary" onclick="connectPrinter()"><i class="fa-solid fa-bluetooth-b"></i> Conectar</button></div>
+        <div class="settings-row"><div><label>Imprimir automaticamente</label><small>Imprime ao receber novo pedido</small></div><label class="adm-sw"><input type="checkbox" id="cfg-autoPrint"><span></span></label></div>
+        <div class="settings-row"><div><label>Papel 58mm</label><small>Knup KP-1025 usa papel 58mm</small></div><label class="adm-sw"><input type="checkbox" id="cfg-paper58" checked><span></span></label></div>
+        <button class="btn-primary" onclick="printTest()" style="margin-top:12px"><i class="fa-solid fa-print"></i> Imprimir Teste</button>
+      </div>
+      <div class="settings-section"><h3><i class="fa-solid fa-bell"></i> Notificações</h3>
+        <div class="settings-row"><div><label>Som de novo pedido</label><small>Alerta sonoro ao receber pedido</small></div><label class="adm-sw"><input type="checkbox" id="cfg-sound" checked><span></span></label></div>
+      </div>
+      <button class="btn-save" onclick="saveSettings()"><i class="fa-solid fa-floppy-disk"></i> Salvar Configurações</button>
+      <div class="settings-section" style="margin-top:16px"><h3><i class="fa-solid fa-database"></i> Dados Locais</h3>
+          <div class="settings-section" style="margin-top:16px">
+      <h3><i class="fa-solid fa-database"></i> Dados</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="exportJSON()" style="padding:9px 16px;font-size:11px"><i class="fa-solid fa-download"></i> Exportar JSON</button>
+        <button style="padding:9px 16px;background:var(--red-bg);color:var(--red);border-radius:var(--r-sm);font-size:11px;font-weight:700;border:1px solid rgba(231,76,60,.2);transition:var(--t)" onclick="clearLocalData()"><i class="fa-solid fa-trash"></i> Limpar Dados Locais</button>
+      </div>
+    </div>
 
-        const diff = freq - nota.freq;
-        const status = document.getElementById("status");
+    <div class="settings-section" style="margin-top:16px;border:1px solid rgba(231,76,60,.15);background:rgba(231,76,60,.03)">
+      <h3><i class="fa-solid fa-skull-crossbones" style="color:var(--red)"></i> Zona de Perigo</h3>
+      <p style="font-size:11px;color:var(--text-faint);margin-bottom:14px;line-height:1.6">
+        <i class="fa-solid fa-triangle-exclamation" style="color:var(--yellow)"></i>
+        Esta ação apaga <strong>TODOS</strong> os pedidos (nuvem + local), reseta o contador de pedidos, remove itens desativados e limpa avisos. <strong>Não tem como desfazer.</strong>
+      </p>
+      <div id="resetStep1">
+        <button style="width:100%;padding:13px;background:var(--red);color:#fff;border-radius:var(--r-sm);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--t);cursor:pointer;border:none;font-family:inherit" onclick="showResetConfirm()">
+          <i class="fa-solid fa-radiation"></i> RESETAR SISTEMA COMPLETO
+        </button>
+      </div>
+      <div id="resetStep2" style="display:none">
+        <div style="background:var(--red-bg);border:1px solid rgba(231,76,60,.2);border-radius:var(--r-md);padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:40px;height:40px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fa-solid fa-lock"></i></div>
+            <div>
+              <div style="font-size:13px;font-weight:800;color:var(--red)">Confirme com senha</div>
+              <div style="font-size:10px;color:var(--text-faint)">Digite a senha de admin para continuar</div>
+            </div>
+          </div>
+          <input type="password" id="resetPassword" placeholder="Senha de admin" class="inp-field" style="width:100%;margin-bottom:12px;text-align:center;font-size:16px;letter-spacing:3px" onkeydown="if(event.key==='Enter')executeFullReset()">
+          <div id="resetError" style="font-size:11px;color:var(--red);font-weight:700;min-height:16px;text-align:center;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <button style="flex:1;padding:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-weight:700;color:var(--text-dim);transition:var(--t);cursor:pointer;border:none;font-family:inherit" onclick="cancelReset()"><i class="fa-solid fa-arrow-left"></i> Cancelar</button>
+            <button style="flex:2;padding:11px;background:var(--red);color:#fff;border-radius:var(--r-sm);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;transition:var(--t);cursor:pointer;border:none;font-family:inherit" onclick="executeFullReset()"><i class="fa-solid fa-bomb"></i> EXECUTAR RESET</button>
+          </div>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
 
-        if (Math.abs(diff) < 1) {
-          status.innerText = "Afinado";
-          status.className = "status ok";
-        } else if (diff < 0) {
-          status.innerText = "Aumente a afinação";
-          status.className = "status baixo";
-        } else {
-          status.innerText = "Diminua a afinação";
-          status.className = "status alto";
-        }
-      }
+  </div>
+</div>
 
-      requestAnimationFrame(detectar);
-    }
+<div class="new-order-alert" id="newOrderAlert"><i class="fa-solid fa-bell"></i> <span id="newOrderText">Novo pedido!</span></div>
 
-    function notaMaisProxima(freq) {
-      let menor = Infinity;
-      let escolhida = notas[0];
+<div class="toast" id="toast">
+  <i class="fa-solid fa-circle-check toast-icon ok" id="toastIcon"></i>
+  <div class="toast-text"><strong id="toastTitle"></strong><span id="toastSub"></span></div>
+</div>
 
-      notas.forEach(n => {
-        const diff = Math.abs(freq - n.freq);
-        if (diff < menor) {
-          menor = diff;
-          escolhida = n;
-        }
-      });
+<!-- MODAL NOVO PEDIDO MANUAL -->
+<div id="addOrderModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:480px;max-height:90dvh;overflow-y:auto;padding:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h2 style="font-size:16px;font-weight:800">📝 Novo Pedido Manual</h2>
+      <button onclick="closeAddOrder()" style="width:32px;height:32px;background:var(--bg-input);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;border:1px solid var(--border)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Cliente</label><input class="inp-field" id="new-customer" placeholder="Nome do cliente" style="width:100%"></div>
+      <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Telefone</label><input class="inp-field" id="new-phone" placeholder="(84) 99999-9999" style="width:100%"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Tipo</label><select class="inp-field" id="new-type" style="width:100%" onchange="document.getElementById('new-address-row').style.display=this.value==='Delivery'||this.value==='Mesa'?'none':'block';document.getElementById('new-table-row').style.display=this.value==='Mesa'?'block':'none'"><option value="Delivery">🛵 Delivery</option><option value="Mesa">🍽️ Mesa</option><option value="Retirada">🏪 Retirada</option></select></div>
+        <div id="new-table-row" style="display:none"><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Mesa</label><input class="inp-field" id="new-table" placeholder="Ex: Mesa 5" style="width:100%"></div>
+      </div>
+      <div id="new-address-row"><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Endereço</label><input class="inp-field" id="new-address" placeholder="Rua, número, bairro" style="width:100%"></div>
+      <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Itens do Pedido</label><textarea class="inp-field" id="new-items" placeholder="Ex: 1x X-Burguer - R$25,00&#10;2x Batata Frita - R$15,00" style="width:100%;height:100px;resize:vertical"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Pagamento</label><select class="inp-field" id="new-payment" style="width:100%"><option value="PIX">PIX</option><option value="Cartão de Crédito">Cartão Crédito</option><option value="Cartão de Débito">Cartão Débito</option><option value="Dinheiro">Dinheiro</option></select></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Total (R$)</label><input class="inp-field" id="new-total" type="number" step="0.01" placeholder="0.00" style="width:100%"></div>
+      </div>
+      <div><label style="font-size:10px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Observação</label><input class="inp-field" id="new-obs" placeholder="Sem cebola, sem molho..." style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button onclick="closeAddOrder()" style="flex:1;padding:12px;background:var(--bg-input);border-radius:var(--r-sm);font-size:12px;font-weight:700;color:var(--text-dim);border:1px solid var(--border)">Cancelar</button>
+      <button onclick="addOrderManual()" style="flex:2;padding:12px;background:var(--primary);color:#fff;border-radius:var(--r-sm);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;transition:var(--t)"><i class="fa-solid fa-plus"></i> Criar Pedido</button>
+    </div>
+  </div>
+</div>
 
-      return escolhida;
-    }
-
-    function autoCorrelacao(buffer, sampleRate) {
-      let tamanho = buffer.length;
-      let max = 0;
-      let indice = -1;
-
-      for (let lag = 20; lag < 1000; lag++) {
-        let soma = 0;
-        for (let i = 0; i < tamanho - lag; i++) {
-          soma += buffer[i] * buffer[i + lag];
-        }
-        if (soma > max) {
-          max = soma;
-          indice = lag;
-        }
-      }
-      if (indice === -1) return -1;
-      return sampleRate / indice;
-    }
-  </script>
-
+<script src="script.js"></script>
 </body>
 </html>
